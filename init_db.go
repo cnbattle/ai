@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-var ORM *gorm.DB
+var DB *gorm.DB
 
 //DB=true
 //DB_DSN=root:123456@(127.0.0.1:3306)/aiio?charset=utf8mb4&parseTime=true&loc=Local
@@ -16,7 +16,8 @@ var ORM *gorm.DB
 
 func init() {
 	if GetDefaultEnvToBool("DB", false) {
-		ORM = InitGorm(GetEnv("DB_DSN"), GetEnv("DB_PREFIX"))
+		LOG.Trace("auto initialization DB")
+		DB = InitGorm(GetEnv("DB_DSN"), GetEnv("DB_PREFIX"))
 	}
 }
 

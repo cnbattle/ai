@@ -1,6 +1,8 @@
 package ai
 
-var Token *TokenClient
+import "cnbattle.com/ai/pkg/token"
+
+var Token *token.Client
 
 //TOKEN=true
 //TOKEN_SECRET=aiio
@@ -8,7 +10,8 @@ var Token *TokenClient
 
 func init() {
 	if GetDefaultEnvToBool("TOKEN", false) {
-		Token = NewTokenClient(GetDefaultEnv("TOKEN_SECRET", "cnbattle"),
+		LOG.Trace("auto initialization TOKEN")
+		Token = token.NewClient(GetDefaultEnv("TOKEN_SECRET", "aiio"),
 			GetDefaultEnvToInt("TOKEN_EXP", 7200))
 	}
 }

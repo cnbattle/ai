@@ -1,33 +1,26 @@
-package ai
+package token
 
 import (
 	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// TokenClaims JWT TokenClaims
-type TokenClaims struct {
-	Exp  int    `json:"exp"`
-	Iat  int    `json:"iat"`
-	UID  string `json:"uid"`
-	Role string `json:"role"`
-}
-
-type TokenClient struct {
+type Client struct {
 	SecretKey string // 密钥
 	Exp       int    // 分钟
 }
 
-// NewTokenClient 初始化一个 TokenClient
-func NewTokenClient(secretKey string, exp int) *TokenClient {
-	return &TokenClient{SecretKey: secretKey, Exp: exp}
+// NewClient 初始化一个 Token Client
+func NewClient(secretKey string, exp int) *Client {
+	return &Client{SecretKey: secretKey, Exp: exp}
 }
 
 // GenerateToken 生成一个token
-func (c *TokenClient) GenerateToken(uid, role string) (string, error) {
+func (c *Client) GenerateToken(uid, role string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"uid":  uid,
 		"role": role,
@@ -38,7 +31,7 @@ func (c *TokenClient) GenerateToken(uid, role string) (string, error) {
 }
 
 // VerifyToken 验证token
-func (c *TokenClient) VerifyToken(tokenStr string) (claims TokenClaims, err error) {
+func (c *Client) VerifyToken(tokenStr string) (claims Claims, err error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("not authorization")
@@ -55,7 +48,7 @@ func (c *TokenClient) VerifyToken(tokenStr string) (claims TokenClaims, err erro
 	if err != nil {
 		return claims, err
 	}
-	jwtClaims := TokenClaims{}
+	jwtClaims := Claims{}
 	err = json.Unmarshal(b, &jwtClaims)
 	if err != nil {
 		return claims, err
@@ -63,8 +56,17 @@ func (c *TokenClient) VerifyToken(tokenStr string) (claims TokenClaims, err erro
 	return jwtClaims, nil
 }
 
+// VerifyToken 验证token
+func (c *Client) VerifyTokenWithCtx(ctx *gin.Context) (claims Claims, err error) {
+	tokenStr, _ := ctx.Cookie("Authorization")
+	if len(tokenStr) == 0 {
+		tokenStr = ctx.GetHeader("Authorization")
+	}
+	return c.VerifyToken(tokenStr)
+}
+
 // VerifyTokenForRole 验证token
-func (c *TokenClient) VerifyTokenForRole(tokenStr, role string) (claims TokenClaims, err error) {
+func (c *Client) VerifyTokenForRole(tokenStr, role string) (claims Claims, err error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("not authorization")
@@ -81,7 +83,7 @@ func (c *TokenClient) VerifyTokenForRole(tokenStr, role string) (claims TokenCla
 	if err != nil {
 		return claims, err
 	}
-	jwtClaims := TokenClaims{}
+	jwtClaims := Claims{}
 	err = json.Unmarshal(b, &jwtClaims)
 	if err != nil {
 		return jwtClaims, err
@@ -93,7 +95,7 @@ func (c *TokenClient) VerifyTokenForRole(tokenStr, role string) (claims TokenCla
 }
 
 // RenewToken token 续期
-func (c *TokenClient) RenewToken(tokenStr string) (string, error) {
+func (c *Client) RenewToken(tokenStr string) (string, error) {
 	claims, err := c.VerifyToken(tokenStr)
 	if err != nil {
 		return "", err

@@ -2,15 +2,11 @@ package ai
 
 import (
 	"context"
+
+	"cnbattle.com/ai/pkg/cache"
 )
 
-const (
-	Redis     = "Redis"
-	FreeCache = "FreeCache"
-	BigCache  = "BigCache"
-)
-
-var Cache CacheInterface
+var Cache cache.Cache
 
 //CACHE=true
 //CACHE_PROVIDER=Redis or FreeCache or BigCache
@@ -21,7 +17,8 @@ var Cache CacheInterface
 
 func init() {
 	if GetDefaultEnvToBool("CACHE", false) {
-		Cache, _ = NewCacheClient(GetDefaultEnv("CACHE_PROVIDER", "Redis"),
+		LOG.Trace("auto initialization CACHE")
+		Cache, _ = cache.NewClient(GetDefaultEnv("CACHE_PROVIDER", "Redis"),
 			GetEnv("CACHE_HOST"),
 			GetEnv("CACHE_PASS"),
 			GetDefaultEnvToInt("CACHE_DB", 1),
