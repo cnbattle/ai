@@ -2,11 +2,13 @@ package ai
 
 import (
 	"context"
+	"fmt"
 
 	"cnbattle.com/ai/pkg/cache"
 )
 
 var Cache cache.Cache
+var err error
 
 //CACHE=true
 //CACHE_PROVIDER=Redis or FreeCache or BigCache
@@ -18,12 +20,15 @@ var Cache cache.Cache
 func init() {
 	if GetDefaultEnvToBool("CACHE", false) {
 		LOG.Trace("auto initialization CACHE")
-		Cache, _ = cache.NewClient(GetDefaultEnv("CACHE_PROVIDER", "Redis"),
+		Cache, err = cache.NewClient(GetDefaultEnv("CACHE_PROVIDER", "Redis"),
 			GetEnv("CACHE_HOST"),
 			GetEnv("CACHE_PASS"),
 			GetDefaultEnvToInt("CACHE_DB", 1),
 			GetDefaultEnvToInt("CACHE_EXT", 10),
 			context.Background(),
 		)
+		if err != nil {
+			panic(fmt.Sprintf("InitCache err:%v", err))
+		}
 	}
 }

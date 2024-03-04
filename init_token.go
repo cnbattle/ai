@@ -11,7 +11,6 @@ var Token *token.Client
 func init() {
 	if GetDefaultEnvToBool("TOKEN", false) {
 		LOG.Trace("auto initialization TOKEN")
-		Token = token.NewClient(GetDefaultEnv("TOKEN_SECRET", "aiio"),
-			GetDefaultEnvToInt("TOKEN_EXP", 7200))
+		Token = token.NewClient(GetDefaultEnv("TOKEN_SECRET", "aiio"), GetDefaultEnvToInt("TOKEN_EXP", 7200))
 	}
 }

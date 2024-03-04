@@ -1,6 +1,10 @@
 package ai
 
-import "cnbattle.com/ai/pkg/sms"
+import (
+	"fmt"
+
+	"cnbattle.com/ai/pkg/sms"
+)
 
 var SMS sms.Client
 
@@ -23,7 +27,7 @@ func init() {
 			GetEnv("SMS_TEMPLATE"),
 			GetEnv("SMS_APP_ID"))
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("InitSMS err:%v", err))
 		}
 	}
 }

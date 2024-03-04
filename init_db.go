@@ -35,7 +35,7 @@ func InitGorm(dsn, tablePrefix string) *gorm.DB {
 		DisableForeignKeyConstraintWhenMigrating: true,
 	})
 	if err != nil {
-		panic(fmt.Sprintf("InitSqlLite err:%v,dsn:%+v", err, dsn))
+		panic(fmt.Sprintf("InitGorm err:%v,dsn:%+v", err, dsn))
 	}
 	return Db
 }

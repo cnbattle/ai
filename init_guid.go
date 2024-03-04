@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"fmt"
 	"time"
 
 	"cnbattle.com/ai/pkg/guid"
@@ -25,7 +26,7 @@ func init() {
 			uint16(GetDefaultEnvToInt("GUID_WORKER_ID", 1)),
 		)
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("InitGUID err:%v", err))
 		}
 	}
 }
