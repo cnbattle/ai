@@ -3,7 +3,7 @@ package ai
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"runtime"
 
 	"github.com/sirupsen/logrus"
@@ -29,13 +29,14 @@ func init() {
 		// ForceColors:     true, // 强制使用颜色
 		TimestampFormat: "2006-01-02 15:04:05.000",
 		CallerPrettyfier: func(f *runtime.Frame) (second string, first string) {
-			_, b, _, _ := runtime.Caller(0)
-			basepath := filepath.Dir(b)
-			rel, err := filepath.Rel(basepath, f.File)
-			if err != nil {
-				LOG.Error("Couldn't determine file path\n", err)
-			}
-			return "", fmt.Sprintf("%s:%d", rel, f.Line)
+			return "", fmt.Sprintf("%s:%d", path.Base(f.File), f.Line)
+			// _, b, _, _ := runtime.Caller(0)
+			// basepath := filepath.Dir(b)
+			// rel, err := filepath.Rel(basepath, f.File)
+			// if err != nil {
+			// 	LOG.Error("Couldn't determine file path\n", err)
+			// }
+			// return "", fmt.Sprintf("%s:%d", rel, f.Line)
 		},
 	})
 }
