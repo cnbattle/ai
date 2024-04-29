@@ -1,7 +1,7 @@
 package guid
 
 import (
-	"go.jetpack.io/typeid"
+	"go.jetify.com/typeid"
 )
 
 type TypeIDGen struct {
