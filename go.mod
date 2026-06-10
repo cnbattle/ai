@@ -7,7 +7,7 @@ toolchain go1.24.2
 require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
 	github.com/allegro/bigcache/v3 v3.1.0
-	github.com/coocood/freecache v1.2.5
+	github.com/coocood/freecache v1.2.7
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/gofrs/uuid/v5 v5.4.0
