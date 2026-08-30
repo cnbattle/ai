@@ -1,6 +1,11 @@
 package cache
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var ErrCacheEmpty = errors.New("cache: empty value")
 
 type Cache interface {
 	Set(key, value string, exp time.Duration) error

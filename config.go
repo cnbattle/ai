@@ -74,3 +74,16 @@ func GetDefaultEnvToBool(key string, defaultValue bool) (value bool) {
 		return defaultValue
 	}
 }
+
+// GetDefaultEnvToFloat64 GetDefaultEnvToFloat64
+func GetDefaultEnvToFloat64(key string, defaultValue float64) (value float64) {
+	tmp := GetEnv(key)
+	if tmp == "" {
+		return defaultValue
+	}
+	value, err := strconv.ParseFloat(tmp, 64)
+	if err != nil {
+		return defaultValue
+	}
+	return value
+}

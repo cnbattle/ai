@@ -20,7 +20,7 @@ func NewFreeCacheClient(cacheSize int) *FreeCacheClient {
 }
 
 func (r *FreeCacheClient) Set(key, value string, exp time.Duration) error {
-	return r.client.Set([]byte(key), []byte(value), int(exp))
+	return r.client.Set([]byte(key), []byte(value), int(exp.Seconds()))
 }
 
 func (r *FreeCacheClient) Get(key string) (string, error) {

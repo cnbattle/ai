@@ -86,6 +86,8 @@ result := ai.DB.Create(&user)
 | `CACHE_PASS` | 密码（可选） | |
 | `CACHE_DB` | 数据库编号（可选） | `0` |
 | `CACHE_EXT` | 扩展参数（可选） | FreeCache: 缓存大小(字节)，BigCache: 清理间隔(秒) |
+| `CACHE_JITTER_RATIO` | TTL 抖动比例（可选） | `0.1`（默认 ±10%） |
+| `CACHE_EMPTY_TTL` | 空值缓存过期时间（可选） | `1s`（默认） |
 
 ```go
 // .env — 使用 Redis
@@ -98,10 +100,80 @@ CACHE=true
 CACHE_PROVIDER=FreeCache
 CACHE_EXT=104857600
 
-// 代码中直接使用
-ai.Cache.Set("key", "value", 60)  // 过期时间 60 秒
+// 基础用法（ai.Cache 是 *cache.ProtectedCache，兼容 cache.Cache 接口）
 val, _ := ai.Cache.Get("key")
 ai.Cache.Del("key")
+```
+
+`ai.Cache` 是 `*cache.ProtectedCache`，提供两组写入方法：
+- `Set` — 直接写入，不做 TTL 抖动
+- `SetWithJitter` — 写入时 TTL ±10% 随机偏移（可通过 `WithJitterRatio` 调整）
+
+#### 防雪崩 — 随机抖动 TTL
+
+同一时间写入大量 key 时，给 TTL 加 ±10% 随机偏移（默认，可通过 `WithJitterRatio` 自定义），避免同时过期：
+
+```go
+// 传统方式：所有 key 同时过期 → 雪崩
+ai.Cache.Set("k1", "v1", time.Hour)
+ai.Cache.Set("k2", "v2", time.Hour)
+
+// SetWithJitter：TTL 随机抖动 → 过期时间分散
+ai.Cache.SetWithJitter(ctx, "k1", "v1", time.Hour) // 54m ~ 66m
+ai.Cache.SetWithJitter(ctx, "k2", "v2", time.Hour) // 54m ~ 66m
+```
+
+#### 防击穿 — singleflight 合并并发请求
+
+热 key 过期时，多个并发请求只有一个真正查 DB，其余等待复用结果：
+
+```go
+val, err := ai.Cache.GetOrLoad(ctx, "user:123", 5*time.Minute,
+    func(ctx context.Context) (string, error) {
+        // 此函数在并发请求下只执行一次（singleflight）
+        return db.GetUser(ctx, "123")
+    },
+)
+if err != nil {
+    // loader 返回的业务错误（非空值缓存场景）
+}
+```
+
+#### 防穿透 — 空值缓存
+
+查询不存在的数据时，缓存空值占位（`emptyTTL` = 1 秒），防止请求直达 DB：
+
+- loader 返回 `""` → 自动缓存空值，返回 `cache.ErrCacheEmpty`
+- loader 返回 error → 原样传播，不缓存
+- 空值 1 秒后自动过期，或调用 `DeleteEmpty` 手动清除
+
+```go
+val, err := ai.Cache.GetOrLoad(ctx, "user:999", 5*time.Minute,
+    func(ctx context.Context) (string, error) {
+        user, err := db.GetUser(ctx, "999")
+        if err != nil {
+            return "", err // 返回 error → 不缓存，传播错误
+        }
+        return user, nil  // user 为 "" 时 → 自动缓存空值
+    },
+)
+if err == cache.ErrCacheEmpty {
+    // 数据不存在（已缓存空值，1秒内不重复查 DB）
+}
+
+// 数据变更后清除空值缓存
+_ = ai.Cache.DeleteEmpty("user:999")
+```
+
+#### Tag 多实例
+
+```go
+// 同样返回 *cache.ProtectedCache，自动带三重防护
+userCache := ai.InitCacheForTag("user")
+sessionCache := ai.InitCacheForTag("session")
+
+userCache.SetWithJitter(ctx, "u:1", "data", time.Hour)
+val, err := userCache.GetOrLoad(ctx, "u:1", time.Minute, loader)
 ```
 
 ### 短信
@@ -359,14 +431,50 @@ import "cnbattle.com/ai/pkg/cache"
 c := cache.Init("127.0.0.1:6379", "", 0, context.Background())
 
 // 通过 provider 创建
-c := cache.NewClient("Redis", "127.0.0.1:6379", "", 0, "", context.Background())
-c := cache.NewClient("FreeCache", "", "", 0, "104857600", context.Background())
-c := cache.NewClient("BigCache", "", "", 0, "300", context.Background())
+c, _ := cache.NewClient("Redis", "127.0.0.1:6379", "", 0, 0, context.Background())
+c, _ := cache.NewClient("FreeCache", "", "", 0, 104857600, context.Background())
+c, _ := cache.NewClient("BigCache", "", "", 0, 300, context.Background())
 
 // 使用
-c.Set("key", "value", 60)
+c.Set("key", "value", time.Minute)
 val, _ := c.Get("key")
 c.Del("key")
+```
+
+#### ProtectedCache — 防雪崩/击穿/穿透
+
+```go
+import "cnbattle.com/ai/pkg/cache"
+
+// 包装任意 Cache 实现，自动获得三重防护（使用默认配置）
+pc := cache.NewProtectedCache(c)
+
+// 自定义配置
+pc := cache.NewProtectedCache(c,
+    cache.WithJitterRatio(0.2),            // TTL 抖动 ±20%（默认 0.1 = ±10%）
+    cache.WithEmptyTTL(5 * time.Second),   // 空值缓存过期时间（默认 1s）
+)
+
+// 防雪崩：TTL 随机抖动
+pc.SetWithJitter(ctx, "key", "value", time.Hour)
+
+// 防击穿 + 防穿透：singleflight 合并并发请求 + 空值缓存
+//
+// loader 返回值约定：
+//   - 返回 (数据, nil) → 缓存数据，正常返回
+//   - 返回 ("", nil)   → 缓存空值占位（emptyTTL），返回 cache.ErrCacheEmpty
+//   - 返回 ("", err)   → 不缓存，原样传播 err
+val, err := pc.GetOrLoad(ctx, "user:123", 5*time.Minute,
+    func(ctx context.Context) (string, error) {
+        return db.GetUser(ctx, "123")
+    },
+)
+if err == cache.ErrCacheEmpty {
+    // 数据不存在（已缓存空值，emptyTTL 内不重复查 DB）
+}
+
+// 数据变更后清除空值缓存
+_ = pc.DeleteEmpty("user:123")
 ```
 
 ### guid — ID 生成器

@@ -27,19 +27,33 @@ func InitGormForTag(tag string) *gorm.DB {
 // CACHE_TAG_PASS=123456
 // CACHE_TAG_DB=1
 // CACHE_TAG_EXT=10
+// CACHE_TAG_JITTER_RATIO=0.1
+// CACHE_TAG_EMPTY_TTL=1s
 
-func InitCacheForTag(tag string) cache.Cache {
-	Cache, err = cache.NewClient(GetEnv(fmt.Sprintf("CACHE_%v_PROVIDER", strings.ToUpper(tag))),
-		GetEnv(fmt.Sprintf("CACHE_%v_HOST", strings.ToUpper(tag))),
-		GetEnv(fmt.Sprintf("CACHE_%v_PASS", strings.ToUpper(tag))),
-		GetDefaultEnvToInt(fmt.Sprintf("CACHE_%v_DB", strings.ToUpper(tag)), 1),
-		GetDefaultEnvToInt(fmt.Sprintf("CACHE_%v_EXT", strings.ToUpper(tag)), 10),
+func InitCacheForTag(tag string) *cache.ProtectedCache {
+	upper := strings.ToUpper(tag)
+	c, err := cache.NewClient(GetEnv(fmt.Sprintf("CACHE_%v_PROVIDER", upper)),
+		GetEnv(fmt.Sprintf("CACHE_%v_HOST", upper)),
+		GetEnv(fmt.Sprintf("CACHE_%v_PASS", upper)),
+		GetDefaultEnvToInt(fmt.Sprintf("CACHE_%v_DB", upper), 1),
+		GetDefaultEnvToInt(fmt.Sprintf("CACHE_%v_EXT", upper), 10),
 		context.Background(),
 	)
 	if err != nil {
 		panic(fmt.Sprintf("InitCache err:%v", err))
 	}
-	return Cache
+	var opts []cache.Option
+	if v := GetDefaultEnvToFloat64(fmt.Sprintf("CACHE_%v_JITTER_RATIO", upper), -1); v >= 0 {
+		opts = append(opts, cache.WithJitterRatio(v))
+	}
+	if v := GetEnv(fmt.Sprintf("CACHE_%v_EMPTY_TTL", upper)); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			panic(fmt.Sprintf("InitCache CACHE_%v_EMPTY_TTL parse err:%v", upper, err))
+		}
+		opts = append(opts, cache.WithEmptyTTL(d))
+	}
+	return cache.NewProtectedCache(c, opts...)
 }
 
 // env name
