@@ -90,6 +90,16 @@ func (p *ProtectedCache) DeleteEmpty(key string) error {
 	return p.Cache.Del(key)
 }
 
+// DelMulti 批量删除多个 key。
+func (p *ProtectedCache) DelMulti(keys ...string) error {
+	for _, key := range keys {
+		if err := p.Cache.Del(key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (p *ProtectedCache) jitterTTL(exp time.Duration) time.Duration {
 	jitter := time.Duration(float64(exp) * p.jitterRatio)
 	if jitter <= 0 {

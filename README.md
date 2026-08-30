@@ -477,6 +477,42 @@ if err == cache.ErrCacheEmpty {
 _ = pc.DeleteEmpty("user:123")
 ```
 
+### crud — GORM 缓存 CRUD
+
+基于 GORM + ProtectedCache 的通用 CRUD 基础库，参考 go-zero model cache 设计。
+
+```go
+import "cnbattle.com/ai/pkg/crud"
+
+type User struct {
+    crud.CachedModel[int64]
+    Name string `json:"name"`
+    Age  int    `json:"age"`
+}
+
+func (User) TableName() string { return "users" }
+
+// 初始化
+q := crud.NewRepo[User, User](ai.DB, ai.Cache, 5*time.Minute)
+
+// read-through 查询（缓存 miss → singleflight → 查 DB → 写缓存）
+user, _ := q.FindByID(ctx, &User{ID: 1})
+
+// 按字段查询（字段缓存只存主键，完整数据走主键缓存）
+user, _ = q.FindByField(ctx, &User{}, "name", "张三")
+
+// 写入（自动失效相关缓存）
+q.Create(ctx, &User{ID: 2, Name: "李四", Age: 30})
+q.UpdateByID(ctx, &User{ID: 2}, map[string]any{"age": 31})
+q.DeleteByID(ctx, &User{ID: 2})
+
+// 批量操作（自动先查后删/更+失效）
+q.DeleteBatch(ctx, "age < ?", 18)
+q.UpdateBatch(ctx, map[string]any{"status": 1}, "status = ?", 0)
+```
+
+详细文档见 [pkg/crud/README.md](pkg/crud/README.md)。
+
 ### guid — ID 生成器
 
 统一的 ID 生成接口，支持多种算法：
