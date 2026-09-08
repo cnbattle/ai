@@ -1,6 +1,6 @@
 module cnbattle.com/ai
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
@@ -19,7 +19,7 @@ require (
 	github.com/volcengine/volc-sdk-golang v1.0.256
 	github.com/yitter/idgenerator-go v1.3.3
 	go.jetify.com/typeid v1.3.0
-	golang.org/x/sync v0.22.0
+	golang.org/x/sync v0.23.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.2
