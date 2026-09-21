@@ -16,7 +16,7 @@ require (
 	github.com/sony/sonyflake v1.3.0
 	github.com/spf13/cast v1.10.0
 	github.com/tidwall/gjson v1.19.0
-	github.com/volcengine/volc-sdk-golang v1.0.256
+	github.com/volcengine/volc-sdk-golang v1.0.257
 	github.com/yitter/idgenerator-go v1.3.3
 	go.jetify.com/typeid v1.3.0
 	golang.org/x/sync v0.22.0
